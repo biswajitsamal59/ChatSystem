@@ -1,0 +1,26 @@
+@hostname = localhost
+@port = 7072 
+@host = https://{{hostname}}:{{port}}
+
+### 1. Check Initial Status
+# Use this to see your currently active agents and queue length
+GET {{host}}/api/chat/status
+Accept: application/json
+
+### 2. Start a New Chat
+# This will return a SessionId. Copy that SessionId for the next request.
+POST {{host}}/api/chat/start
+Accept: application/json
+
+### 3. Poll the Session (Simulate the client keeping the chat alive)
+# Replace the GUID below with the SessionId you got from the "Start a New Chat" request.
+# Try clicking "Send request" on this multiple times. 
+# If you wait more than 3 seconds between clicks, the MonitorWorker will kill the session!
+POST {{host}}/api/chat/959176c5-4c92-4038-bfc3-21dee3a89005/poll
+Accept: application/json
+
+### 4. Spam the Queue (Test Overflow/Refusal)
+# Click "Send request" on this rapidly to fill up the queue. 
+# Then run the Status request again to watch the queue grow and see how agents are assigned.
+POST {{host}}/api/chat/start
+Accept: application/json

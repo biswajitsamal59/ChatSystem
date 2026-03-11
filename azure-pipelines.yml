@@ -1,0 +1,52 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dockerRegistryServiceConnection: 'MyDockerRegistryConnection' 
+  imageRepository: 'chatapi'
+  tag: '$(Build.BuildId)'
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Install .NET 8.0 SDK'
+  inputs:
+    packageType: 'sdk'
+    version: '8.0.x'
+
+# Roslyn-based security analyzers is configured inside API project
+- task: DotNetCoreCLI@2
+  displayName: 'Build Solution'
+  inputs:
+    command: 'build'
+    projects: '**/*.sln'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Run Unit Tests & Collect Coverage'
+  inputs:
+    command: 'test'
+    projects: '**/*Tests.csproj'
+    arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage"'
+    publishTestResults: true
+
+- task: PublishCodeCoverageResults@2
+  displayName: 'Publish Code Coverage Results'
+  inputs:
+    summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+    failIfCoverageEmpty: false
+
+- task: Docker@2
+  displayName: 'Build and Push Docker Image'
+  inputs:
+    command: 'buildAndPush'
+    repository: '$(imageRepository)'
+    dockerfile: 'ChatAPI/Dockerfile'
+    buildContext: '$(Build.SourcesDirectory)' 
+    containerRegistry: '$(dockerRegistryServiceConnection)'
+    tags: |
+      $(tag)
+      latest
